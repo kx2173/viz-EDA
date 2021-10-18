@@ -8,6 +8,7 @@ output: github_document
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(ggridges)
+library(patchwork)
 ```
 
 ```{r}
@@ -188,4 +189,300 @@ weather_df %>%
   ggplot(aes(x = tmin, y = name)) +
   geom_density_ridges()
 ```
+
+
+## Save and Embed
+
+Let's save a scatterplot.
+
+```{r}
+weather_plot =
+  weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5)
+
+ggsave("./results/weather_plot.pdf", weather_plot, width = 8, height = 5)
+```
+
+What about embedding.
+
+```{r, fig.width= 6, fig.height=3}
+weather_plot
+```
+
+A different size
+```{r, fig.width= 12, fig.height=6}
+weather_plot
+```
+
+
+# Visulization II
+
+## Remember this plot..?
+
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5)
+```
+
+## Adding  labels
+
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    caption = "Data from the rnoaa package; temoerature in 2017."
+  )
+```
+
+## Scales
+
+Start with the same plot
+
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    caption = "Data from the rnoaa package; temoerature in 2017."
+  ) +
+  scale_x_continuous(
+    breaks = c(-15, 0, 15),
+    labels = c("-15 C", "0", "15")
+  ) +
+  scale_y_continuous(
+    trans = "log", #transform y value into log(y)
+    position = "right" # label in right
+  )
+```
+
+Look at color scales
+
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    caption = "Data from the rnoaa package; temoerature in 2017."
+  ) +
+  scale_color_hue(
+    name = "Location", # change name of coloe label
+    h = c(100,300))
+```
+
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    caption = "Data from the rnoaa package; temoerature in 2017."
+  ) +
+  viridis::scale_color_viridis(
+    name = "Location",
+    discrete = TRUE)
+```
+
+## Themes
+
+Shfit the legend
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    caption = "Data from the rnoaa package; temoerature in 2017."
+  ) +
+  viridis::scale_color_viridis(
+    name = "Location",
+    discrete = TRUE) +
+  theme(legend.position = "bottom") # move color legend into bottom
+```
+
+Change the overall theme
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temperature plot",
+    x = "Minimum daily temperature (C)",
+    y = "Maxiumum daily temperature (C)",
+    caption = "Data from the rnoaa package; temoerature in 2017."
+  ) +
+  viridis::scale_color_viridis(
+    name = "Location",
+    discrete = TRUE) +
+  theme_minimal() # change background of plot
+```
+
+
+## Setting options
+
+画图模板, what you should include when plotting
+```{r, eval=FALSE}
+
+library(tidyverse)
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom")) # always keeping it at the last line of code
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_color_discrete = scale_color_viridis_d
+scale_fill_discrete = scale_fill_viridis_d # these four line is to make sure all plot are using "viridis" color
+```
+
+
+## Data args in `geom`
+
+```{r}
+central_park = 
+  weather_df %>%
+  filter(name == "CentralPark_NY")
+
+waikiki = 
+  weather_df %>%
+  filter(name == "Waikiki_HA")
+
+ggplot(data = waikiki, aes(x = date, y = tmax, color = name)) +
+  geom_point() +
+  geom_line(data = central_park) #you can call different data
+```
+
+
+## Patchwork
+
+Remember faceting?
+
+```{r}
+weather_df %>%
+  ggplot(aes(x = tmin, fill = name)) +
+  geom_density(alpha = .5) +
+  facet_grid(. ~name)
+```
+
+What happens when you want multipanel plots but can't facet...?
+
+```{r}
+tmax_tmin_p = 
+  weather_df %>%
+  ggplot(aes(x = tmin, y = tmax, color = name)) +
+  geom_point(alpha = .5) +
+  theme(legend.position = "none")
+
+prcp_dens_p =
+  weather_df %>%
+  filter(prcp > 0) %>%
+  ggplot(aes(x = prcp, fill = name)) +
+  geom_density(alpha = .5) +
+  theme(legend.position = "none")
+
+tmax_date_p =
+  weather_df %>%
+  ggplot(aes(x = date, y = tmax, color = name)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  theme(legend.position = "none")
+
+tmax_tmin_p + prcp_dens_p  # you got two side by side plots
+(tmax_tmin_p + prcp_dens_p) / tmax_date_p #上面两张，下面一张
+```
+
+## Data manipulation
+
+Control your factors
+```{r}
+weather_df %>%
+  mutate(
+    name = factor(name),
+    name = forcats::fct_relevel(name, c("Waikiki_HA")) # relevel names, change Waikiki as the fitst order
+  ) %>%
+  ggplot(aes(x = name, y = tmax, color = name)) +
+  geom_violin(alpha = .5)
+```
+
+What if I wanted densities for tmin and tmax simultaneously?
+
+```{r}
+weather_df %>% 
+  pivot_longer(
+    tmax:tmin,
+    names_to = "observation",
+    values_to = "temperatures"
+  ) %>% 
+  ggplot(aes(x = temperatures, fill = observation)) +
+  geom_density(alpha = .5) +
+  facet_grid(. ~name)
+```
+
+Another example:
+```{r}
+pulse_df = 
+  haven::read_sas("data/public_pulse_data.sas7bdat") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit",
+    values_to = "bdi",
+    names_prefix = "bdi_score_"
+  ) %>% 
+  mutate(visit = recode(visit, "bl" = "00m"))
+
+pulse_df %>% 
+  ggplot(aes(x = visit, y = bdi)) +
+  geom_point(size = .2) +
+  geom_line(aes(group = id)) # this shows what happens to individuals over time
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

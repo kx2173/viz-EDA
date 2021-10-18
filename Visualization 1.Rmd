@@ -11,6 +11,8 @@ library(ggridges)
 library(patchwork)
 ```
 
+# Visulization 1
+
 ```{r}
 weather_df = 
   rnoaa::meteo_pull_monitors(
@@ -172,7 +174,7 @@ Trendy plots
 ```{r}
 weather_df %>%
   ggplot(aes(x = name, y = tmin, fill = name)) +
-  geom_violin
+  geom_violin()
 ```
 
 ```{r}
@@ -459,13 +461,119 @@ pulse_df %>%
 ```
 
 
+# EDA
+
+```{r}
+weather_df =  
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USC00519397", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(
+      id, 
+      USW00094728 = "CentralPark_NY", 
+      USC00519397 = "Waikiki_HA",
+      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10,
+    month = lubridate::floor_date(date, unit = "month")) %>%
+  select(name, id, everything())
+```
 
 
 
+## Group by 
+```{r}
+weather_df %>% 
+  group_by(name) # showing the number of name category above data set, if group_by(month, name), it will show # of groups rise from name and month (两两一组)
+```
+
+## count some things
+
+```{r}
+weather_df %>% 
+  group_by(name, month) %>% 
+  summarize(n_obs = n()) #how many observations
+
+weather_df %>% 
+  count(name) #和上面的name的结果一样的
+```
+
+It's nice that this is a data frame
+
+```{r}
+weather_df %>% 
+  janitor::tabyl(month, name)
+
+weather_df %>% 
+  pull(name) %>% 
+  table()  #similar result as above code
+```
 
 
+## More general summaries
+
+Let's count, take means, look at SDs...
+
+```{r}
+weather_df %>%
+  group_by(name) %>%
+  summarize(
+    n_obs = n(),
+    mean_tmax = mean(tmax, na.rm = TRUE),
+    sd_tmax = sd(tmax, na.rm = TRUE),
+    median_tmax = median(tmax, na.rm = TRUE)
+  ) %>% 
+  ggplot(aes(x = month, y = mean_tmax, color = name)) +
+  geom_point() +
+  geom_line()
+```
+
+# Formatting table outputs
+
+```{r}
+weather_df %>% 
+  group_by(name) %>% 
+  summarize(
+    n_obs = n(),
+    mean_tmax = mean(tmax, na.rm = TRUE)
+  ) %>% 
+  knitr::kable(digits = 2)
+```
 
 
+## grouped "mutate"
+
+```{r}
+weather_df %>%
+  group_by(name) %>% #有这一行和没有这一行，跑出来的结果是不一样的
+  mutate(
+    mean_tmax = mean(tmax, na.rm = TRUE)
+  )
+```
+
+
+```{r}
+weather_df %>% 
+  group_by(name) %>% 
+  mutate(
+    tmax_rank = min_rank(tmax) # rank, same category having same number
+  ) %>% 
+  filter(tmax_rank < 2)
+```
+
+Lagged variables
+```{r}
+weather_df %>% 
+  group_by(name) %>% 
+  mutate(
+    lagged_tmax = lag(tmax, n = 1), #this shows what is the tmax on the day before, if there is no group_by(name), it will not lag by name
+    tmax_diff = tmax - lagged_tmax
+  ) %>% 
+  summarize(diff_sd = sd(tmax_diff, na.rm = TRUE))
+```
 
 
 
